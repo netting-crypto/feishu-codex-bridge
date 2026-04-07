@@ -1,0 +1,21 @@
+{
+  "name": "feishu-codex-bridge",
+  "version": "0.1.0",
+  "private": false,
+  "description": "Bridge Feishu messages into local Codex Desktop threads.",
+  "type": "module",
+  "bin": {
+    "feishu-codex-bridge": "./bridge/feishu-bot.mjs"
+  },
+  "scripts": {
+    "start": "node bridge/feishu-bot.mjs",
+    "check": "node --check bridge/feishu-bot.mjs && node --check bridge/codex-im/desktop-codex-client.cjs && node --check bridge/codex-im/desktop-ipc-client.cjs && node --check bridge/codex-im/session-store.cjs && node --check bridge/codex-im/workspace-paths.cjs && node --check bridge/codex-im/command-parsing.cjs"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.59.0",
+    "dotenv": "^17.3.1"
+  }
+}

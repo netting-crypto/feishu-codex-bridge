@@ -15,15 +15,15 @@ Only these Feishu tools are exposed:
 
 It also exposes these normal-Sheets tools:
 
-- `sheets.v3.spreadsheet.get`
-- `sheets.v3.spreadsheetSheet.query`
-- `sheets.v2.spreadsheetValues.get`
-- `sheets.v2.spreadsheetValues.update`
-- `sheets.v2.spreadsheetValues.append`
+- `sheets_v3_spreadsheet_get`
+- `sheets_v3_spreadsheetSheet_query`
+- `sheets_v2_spreadsheetValues_get`
+- `sheets_v2_spreadsheetValues_update`
+- `sheets_v2_spreadsheetValues_append`
 
 No delete APIs are exposed.
 
-For a Wiki-backed Sheet, call `wiki.v2.space.getNode` first and use its `obj_token` as `spreadsheet_token`. Use `sheets.v3.spreadsheetSheet.query` to resolve a worksheet `sheet_id`, then ranges use the form `<sheet_id>!A1:Z100`.
+For a Wiki-backed Sheet, call `wiki_v2_space_getNode` first and use its `obj_token` as `spreadsheet_token`. Use `sheets_v3_spreadsheetSheet_query` to resolve a worksheet `sheet_id`, then ranges use the form `<sheet_id>!A1:Z100`.
 
 ## Deploy on Render
 

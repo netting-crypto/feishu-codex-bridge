@@ -117,7 +117,7 @@ const fields = z.record(z.string(), z.any());
 function createServer() {
   const server = new McpServer({ name: "feishu-render-mcp", version: "0.2.0" });
 
-  server.registerTool("wiki.v2.space.getNode", {
+  server.registerTool("wiki_v2_space_getNode", {
     description: "获取飞书知识库节点或对应云文档的节点信息。",
     inputSchema: {
       params: z.object({
@@ -130,7 +130,7 @@ function createServer() {
     feishuRequest("GET", "/open-apis/wiki/v2/spaces/get_node", { query: params, useUAT })
   ));
 
-  server.registerTool("bitable.v1.appTable.list", {
+  server.registerTool("bitable_v1_appTable_list", {
     description: "列出多维表格中的所有数据表。",
     inputSchema: {
       path: z.object({ app_token: z.string().min(1) }),
@@ -141,7 +141,7 @@ function createServer() {
     feishuRequest("GET", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables`, { query: params, useUAT })
   ));
 
-  server.registerTool("bitable.v1.appTableField.list", {
+  server.registerTool("bitable_v1_appTableField_list", {
     description: "获取多维表格数据表中的所有字段。",
     inputSchema: {
       path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1) }),
@@ -157,7 +157,7 @@ function createServer() {
     feishuRequest("GET", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/fields`, { query: params, useUAT })
   ));
 
-  server.registerTool("bitable.v1.appTableRecord.search", {
+  server.registerTool("bitable_v1_appTableRecord_search", {
     description: "查询多维表格数据表中的记录，支持筛选、排序和分页。",
     inputSchema: {
       path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1) }),
@@ -179,7 +179,7 @@ function createServer() {
     feishuRequest("POST", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/records/search`, { query: params, body: data || {}, useUAT })
   ));
 
-  server.registerTool("bitable.v1.appTableRecord.create", {
+  server.registerTool("bitable_v1_appTableRecord_create", {
     description: "在多维表格数据表中新增一条记录。",
     inputSchema: {
       path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1) }),
@@ -195,7 +195,7 @@ function createServer() {
     feishuRequest("POST", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/records`, { query: params, body: data, useUAT })
   ));
 
-  server.registerTool("bitable.v1.appTableRecord.update", {
+  server.registerTool("bitable_v1_appTableRecord_update", {
     description: "更新多维表格中的一条记录。",
     inputSchema: {
       path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1), record_id: z.string().min(1) }),
@@ -207,7 +207,7 @@ function createServer() {
     feishuRequest("PUT", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/records/${encodeURIComponent(path.record_id)}`, { query: params, body: data, useUAT })
   ));
 
-  server.registerTool("sheets.v3.spreadsheet.get", {
+  server.registerTool("sheets_v3_spreadsheet_get", {
     description: "获取飞书电子表格元数据。spreadsheet_token 可由 wiki.getNode 返回的 obj_token 获得。",
     inputSchema: {
       path: z.object({ spreadsheet_token: z.string().min(1) }),
@@ -217,7 +217,7 @@ function createServer() {
     feishuRequest("GET", `/open-apis/sheets/v3/spreadsheets/${encodeURIComponent(path.spreadsheet_token)}`, { useUAT })
   ));
 
-  server.registerTool("sheets.v3.spreadsheetSheet.query", {
+  server.registerTool("sheets_v3_spreadsheetSheet_query", {
     description: "列出电子表格中的工作表，返回 sheet_id、标题和网格属性。",
     inputSchema: {
       path: z.object({ spreadsheet_token: z.string().min(1) }),
@@ -227,7 +227,7 @@ function createServer() {
     feishuRequest("GET", `/open-apis/sheets/v3/spreadsheets/${encodeURIComponent(path.spreadsheet_token)}/sheets/query`, { useUAT })
   ));
 
-  server.registerTool("sheets.v2.spreadsheetValues.get", {
+  server.registerTool("sheets_v2_spreadsheetValues_get", {
     description: "读取电子表格单个范围的值。range 使用 <sheet_id>!A1:Z100；这里要填 sheet_id，不是工作表标题。",
     inputSchema: {
       path: z.object({ spreadsheet_token: z.string().min(1), range: z.string().min(1) }),
@@ -242,7 +242,7 @@ function createServer() {
     feishuRequest("GET", `/open-apis/sheets/v2/spreadsheets/${encodeURIComponent(path.spreadsheet_token)}/values/${encodeURIComponent(path.range)}`, { query: params, useUAT })
   ));
 
-  server.registerTool("sheets.v2.spreadsheetValues.update", {
+  server.registerTool("sheets_v2_spreadsheetValues_update", {
     description: "向电子表格单个范围写入二维数组；覆盖该范围内已有内容。",
     inputSchema: {
       path: z.object({ spreadsheet_token: z.string().min(1) }),
@@ -253,7 +253,7 @@ function createServer() {
     feishuRequest("PUT", `/open-apis/sheets/v2/spreadsheets/${encodeURIComponent(path.spreadsheet_token)}/values`, { body: data, useUAT })
   ));
 
-  server.registerTool("sheets.v2.spreadsheetValues.append", {
+  server.registerTool("sheets_v2_spreadsheetValues_append", {
     description: "从指定电子表格范围向后追加二维数组数据。",
     inputSchema: {
       path: z.object({ spreadsheet_token: z.string().min(1) }),

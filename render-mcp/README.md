@@ -1,6 +1,6 @@
 # Feishu MCP on Render
 
-This directory deploys the official `@larksuiteoapi/lark-mcp` package as a remote Streamable HTTP MCP service on Render.
+This directory deploys a small Streamable HTTP MCP service on Render. It keeps the existing Wiki/Bitable surface and adds direct Feishu Sheets OpenAPI tools because the pinned official MCP package does not expose the spreadsheet range operations we need.
 
 ## Current scope
 
@@ -13,7 +13,17 @@ Only these Feishu tools are exposed:
 - `bitable.v1.appTableRecord.create`
 - `bitable.v1.appTableRecord.update`
 
+It also exposes these normal-Sheets tools:
+
+- `sheets.v3.spreadsheet.get`
+- `sheets.v3.spreadsheetSheet.query`
+- `sheets.v2.spreadsheetValues.get`
+- `sheets.v2.spreadsheetValues.update`
+- `sheets.v2.spreadsheetValues.append`
+
 No delete APIs are exposed.
+
+For a Wiki-backed Sheet, call `wiki.v2.space.getNode` first and use its `obj_token` as `spreadsheet_token`. Use `sheets.v3.spreadsheetSheet.query` to resolve a worksheet `sheet_id`, then ranges use the form `<sheet_id>!A1:Z100`.
 
 ## Deploy on Render
 
@@ -28,7 +38,7 @@ No delete APIs are exposed.
 
    `https://<service-name>.onrender.com/mcp`
 
-The App ID is already configured as `cli_aae195540df8dd24`.
+The App ID is already configured as `cli_aae195540df8dd24`. `APP_SECRET` remains a Render-only secret.
 
 ## Important security note
 

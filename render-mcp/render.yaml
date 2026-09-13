@@ -14,7 +14,3 @@ services:
         sync: false
       - key: LARK_DOMAIN
         value: https://open.feishu.cn
-      - key: LARK_TOKEN_MODE
-        value: tenant_access_token
-      - key: LARK_TOOLS
-        value: wiki.v2.space.getNode,bitable.v1.appTable.list,bitable.v1.appTableField.list,bitable.v1.appTableRecord.search,bitable.v1.appTableRecord.create,bitable.v1.appTableRecord.update

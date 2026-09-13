@@ -39,8 +39,6 @@ async function run() {
   const cols = values.reduce((m, r) => Math.max(m, Array.isArray(r) ? r.length : 0), 0);
   const nonempty = values.reduce((n, r) => n + (Array.isArray(r) ? r.filter(v => v !== null && v !== undefined && String(v) !== "").length : 0), 0);
   console.log(`SHEET_PROBE_OK sheet=${SHEET_PROBE_ID} rows=${rows} cols=${cols} nonempty=${nonempty}`);
-  const sample = values.slice(0, 20).map(r => Array.isArray(r) ? r.slice(0, 20) : r);
-  console.log(`SHEET_PROBE_SAMPLE ${JSON.stringify(sample)}`);
 }
 
 run().catch(error => {

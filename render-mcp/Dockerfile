@@ -7,9 +7,9 @@ COPY package.json ./
 RUN npm install --omit=dev \
   && npm cache clean --force
 
-COPY server.mjs ./
+COPY server-compat.mjs ./
 
 USER node
 EXPOSE 10000
 
-CMD ["node", "server.mjs"]
+CMD ["node", "server-compat.mjs"]

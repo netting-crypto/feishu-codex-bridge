@@ -8,10 +8,15 @@ Only these Feishu tools are exposed:
 
 - `wiki.v2.space.getNode`
 - `bitable.v1.appTable.list`
+- `bitable.v1.appTable.create`
 - `bitable.v1.appTableField.list`
+- `bitable.v1.appTableField.create`
+- `bitable.v1.appTableField.update`
 - `bitable.v1.appTableRecord.search`
 - `bitable.v1.appTableRecord.create`
 - `bitable.v1.appTableRecord.update`
+- `bitable.v1.appTableRecord.batchCreate`
+- `bitable.v1.appTableRecord.batchUpdate`
 
 It also exposes these normal-Sheets tools:
 
@@ -21,7 +26,7 @@ It also exposes these normal-Sheets tools:
 - `sheets_v2_spreadsheetValues_update`
 - `sheets_v2_spreadsheetValues_append`
 
-No delete APIs are exposed.
+No delete APIs are exposed. Schema creation is intentionally create/update-only so automation can provision new CRM tables without gaining destructive table or field deletion capabilities.
 
 For a Wiki-backed Sheet, call `wiki_v2_space_getNode` first and use its `obj_token` as `spreadsheet_token`. Use `sheets_v3_spreadsheetSheet_query` to resolve a worksheet `sheet_id`, then ranges use the form `<sheet_id>!A1:Z100`.
 

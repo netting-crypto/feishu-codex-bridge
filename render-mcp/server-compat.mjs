@@ -158,6 +158,7 @@ const userIdType = z.enum(["open_id", "union_id", "user_id"]).optional();
 const fields = z.record(z.string(), z.any());
 
 const CAREERSAIL_COMPANY_POOL_SENTINEL = "__careersail_provision_company_pool_v1__";
+const CAREERSAIL_FULL_SYSTEM_SENTINEL = "__careersail_provision_full_system_v1__";
 
 function selectProperty(names) {
   return { options: names.map((name) => ({ name })) };
@@ -257,6 +258,166 @@ async function provisionCareerSailCompanyPool(appToken, useUAT) {
   };
 }
 
+const CAREERSAIL_SOURCE_OPTIONS = ["PAPERBALL", "OFFICIAL_ATS", "XHS", "QQ", "CAREER_FAIR", "MANUAL"];
+const CAREERSAIL_STAGE_OPTIONS = ["RESUME_SCREENING", "ASSESSMENT", "WRITTEN_TEST", "AI_INTERVIEW", "INTERVIEW_1", "INTERVIEW_2", "INTERVIEW_3", "HR", "OFFER"];
+const CAREERSAIL_RESULT_OPTIONS = ["PENDING", "PASS", "FAIL"];
+
+function relationField(field_name, table_id, multiple = false) {
+  return { field_name, type: 18, property: { table_id, multiple } };
+}
+
+function careerSailJobFields(companyTableId) {
+  const result = [
+    { field_name: "job_key", type: 1 },
+    relationField("公司", companyTableId, false),
+    { field_name: "公司名", type: 1 },
+    { field_name: "provider", type: 1 },
+    { field_name: "job_id", type: 1 },
+    { field_name: "来源", type: 3, property: selectProperty(CAREERSAIL_SOURCE_OPTIONS) },
+    { field_name: "岗位方向", type: 1 },
+    { field_name: "部门/业务线", type: 1 },
+    { field_name: "城市", type: 1 },
+    { field_name: "JD", type: 1 },
+    { field_name: "岗位链接", type: 15 },
+    { field_name: "开放状态", type: 3, property: selectProperty(["UNKNOWN", "OPEN", "CLOSED", "CLOSED_RISK"]) },
+    { field_name: "岗位开放时间", type: 5 },
+    { field_name: "岗位截止时间", type: 5 },
+    { field_name: "岗位匹配分", type: 2 },
+    { field_name: "岗位匹配档", type: 1 },
+    { field_name: "可投性", type: 3, property: selectProperty(["CAN_APPLY", "NEEDS_VERIFY", "REJECT"]) },
+    { field_name: "匹配理由", type: 1 },
+    { field_name: "风险项", type: 1 },
+    { field_name: "投递状态", type: 3, property: selectProperty(["NOT_APPLIED", "ACTIVE", "WITHDRAWN", "REJECTED", "OFFERED", "ACCEPTED"]) },
+    { field_name: "投递时间", type: 5 },
+    { field_name: "当前阶段", type: 3, property: selectProperty(CAREERSAIL_STAGE_OPTIONS) },
+    { field_name: "当前阶段结果", type: 3, property: selectProperty(CAREERSAIL_RESULT_OPTIONS) },
+    { field_name: "下一步", type: 1 },
+    { field_name: "投递备注", type: 1 },
+    { field_name: "legacy_note", type: 1 },
+    { field_name: "系统更新时间", type: 5 },
+  ];
+  const labels = {
+    RESUME_SCREENING: "简历",
+    ASSESSMENT: "测评",
+    WRITTEN_TEST: "笔试",
+    AI_INTERVIEW: "AI面试",
+    INTERVIEW_1: "一面",
+    INTERVIEW_2: "二面",
+    INTERVIEW_3: "三面/业务终面",
+    HR: "HR面",
+    OFFER: "Offer",
+  };
+  for (const stage of CAREERSAIL_STAGE_OPTIONS) {
+    result.push({ field_name: `${labels[stage]}结果`, type: 3, property: selectProperty(CAREERSAIL_RESULT_OPTIONS) });
+    result.push({ field_name: `${labels[stage]}时间`, type: 5 });
+  }
+  return result;
+}
+
+function careerSailIntelFields(companyTableId, jobTableId) {
+  return [
+    { field_name: "intel_key", type: 1 },
+    relationField("公司", companyTableId, false),
+    { field_name: "公司名", type: 1 },
+    relationField("岗位", jobTableId, false),
+    { field_name: "情报类型", type: 3, property: selectProperty(["REFERRAL_CODE", "REFERRAL_LINK", "JOB_OPENING", "DEADLINE", "WRITTEN_TEST_PROGRESS", "INTERVIEW_PROGRESS", "CAREER_FAIR", "HR_CONTACT", "APPLICATION_TIP", "TIMING_SIGNAL", "OTHER"]) },
+    { field_name: "来源", type: 3, property: selectProperty(CAREERSAIL_SOURCE_OPTIONS) },
+    { field_name: "来源名称", type: 1 },
+    { field_name: "来源记录ID", type: 1 },
+    { field_name: "来源链接", type: 15 },
+    { field_name: "发布时间", type: 5 },
+    { field_name: "采集时间", type: 5 },
+    { field_name: "情报内容", type: 1 },
+    { field_name: "内推码", type: 1 },
+    { field_name: "内推链接", type: 15 },
+    { field_name: "适用届别", type: 2 },
+    { field_name: "适用批次", type: 1 },
+    { field_name: "适用范围", type: 1 },
+    { field_name: "有效性", type: 3, property: selectProperty(["UNVERIFIED", "ACTIVE", "VERIFIED", "STALE", "INVALID", "EXPIRED", "REVOKED"]) },
+    { field_name: "置信度", type: 2 },
+    { field_name: "失效时间", type: 5 },
+    { field_name: "系统更新时间", type: 5 },
+  ];
+}
+
+async function ensureCareerSailTable(appToken, useUAT, { name, primaryFieldName, fields }) {
+  const tablesPath = `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables`;
+  let tableList = await feishuRequest("GET", tablesPath, { query: { page_size: 100 }, useUAT });
+  let table = (tableList.items || []).find((item) => item.name === name);
+  let created = false;
+  if (!table) {
+    await feishuRequest("POST", `${tablesPath}/batch_create`, { body: { tables: [{ name }] }, useUAT });
+    tableList = await feishuRequest("GET", tablesPath, { query: { page_size: 100 }, useUAT });
+    table = (tableList.items || []).find((item) => item.name === name);
+    created = true;
+  }
+  if (!table?.table_id) throw new Error(`CareerSail provisioning failed to resolve ${name} table_id`);
+
+  const fieldsPath = `${tablesPath}/${encodeURIComponent(table.table_id)}/fields`;
+  let fieldList = await feishuRequest("GET", fieldsPath, { query: { page_size: 100 }, useUAT });
+  let existingFields = fieldList.items || [];
+  const primary = existingFields.find((field) => field.is_primary);
+  if (!primary) throw new Error(`CareerSail ${name} has no primary field`);
+  if (primary.field_name !== primaryFieldName) {
+    await feishuRequest("PUT", `${fieldsPath}/${encodeURIComponent(primary.field_id)}`, {
+      body: { field_name: primaryFieldName, type: primary.type, ...(primary.property ? { property: primary.property } : {}) },
+      useUAT,
+    });
+    fieldList = await feishuRequest("GET", fieldsPath, { query: { page_size: 100 }, useUAT });
+    existingFields = fieldList.items || [];
+  }
+
+  const existingByName = new Map(existingFields.map((field) => [field.field_name, field]));
+  const addedFields = [];
+  for (const field of fields) {
+    const existing = existingByName.get(field.field_name);
+    if (existing) {
+      if (existing.type !== field.type) throw new Error(`CareerSail ${name} field type conflict: ${field.field_name} existing=${existing.type} desired=${field.type}`);
+      continue;
+    }
+    await feishuRequest("POST", fieldsPath, { body: field, useUAT });
+    addedFields.push(field.field_name);
+  }
+  const finalFields = await feishuRequest("GET", fieldsPath, { query: { page_size: 100 }, useUAT });
+  return { name, table_id: table.table_id, created, added_fields: addedFields, total_fields: (finalFields.items || []).length };
+}
+
+async function provisionCareerSailFullSystem(appToken, useUAT) {
+  const companyResult = await provisionCareerSailCompanyPool(appToken, useUAT);
+  const companyTableId = companyResult.careersail_provision.table_id;
+  const jobs = await ensureCareerSailTable(appToken, useUAT, {
+    name: "岗位投递",
+    primaryFieldName: "岗位",
+    fields: careerSailJobFields(companyTableId),
+  });
+  const intelligence = await ensureCareerSailTable(appToken, useUAT, {
+    name: "情报内推",
+    primaryFieldName: "情报摘要",
+    fields: careerSailIntelFields(companyTableId, jobs.table_id),
+  });
+
+  const companyFieldsPath = `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(companyTableId)}/fields`;
+  const companyFieldList = await feishuRequest("GET", companyFieldsPath, { query: { page_size: 100 }, useUAT });
+  const companyFields = companyFieldList.items || [];
+  const primaryJob = companyFields.find((field) => field.field_name === "主推岗位");
+  if (!primaryJob) {
+    await feishuRequest("POST", companyFieldsPath, { body: relationField("主推岗位", jobs.table_id, false), useUAT });
+  } else if (primaryJob.type !== 18) {
+    throw new Error(`CareerSail 公司池 field type conflict: 主推岗位 existing=${primaryJob.type} desired=18`);
+  }
+
+  const finalTables = await feishuRequest("GET", `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables`, { query: { page_size: 100 }, useUAT });
+  return {
+    careersail_full_system: {
+      original_tables_preserved: true,
+      company_pool: companyResult.careersail_provision,
+      jobs,
+      intelligence,
+      tables: (finalTables.items || []).map(({ name, table_id }) => ({ name, table_id })),
+    },
+  };
+}
+
 function createServer() {
   const server = new McpServer({ name: "feishu-render-mcp", version: "0.3.0" });
 
@@ -294,6 +455,9 @@ function createServer() {
       useUAT: useUATSchema,
     },
   }, toolHandler(async ({ path, params, useUAT }) => {
+    if (params?.page_token === CAREERSAIL_FULL_SYSTEM_SENTINEL) {
+      return provisionCareerSailFullSystem(path.app_token, useUAT);
+    }
     if (params?.page_token === CAREERSAIL_COMPANY_POOL_SENTINEL) {
       return provisionCareerSailCompanyPool(path.app_token, useUAT);
     }

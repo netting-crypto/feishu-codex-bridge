@@ -197,6 +197,23 @@ function createServer() {
     feishuRequest("GET", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables`, { query: params, useUAT })
   ));
 
+  server.registerTool("bitable_v1_appTable_create", {
+    description: "在多维表格中新增一个数据表。不会删除或覆盖现有数据表。",
+    inputSchema: {
+      path: z.object({ app_token: z.string().min(1) }),
+      data: z.object({
+        table: z.object({
+          name: z.string().min(1),
+          default_view_name: z.string().min(1).optional(),
+          fields: z.array(z.any()).optional(),
+        }),
+      }),
+      useUAT: useUATSchema,
+    },
+  }, toolHandler(({ path, data, useUAT }) =>
+    feishuRequest("POST", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables`, { body: data, useUAT })
+  ));
+
   server.registerTool("bitable_v1_appTableField_list", {
     description: "获取多维表格数据表中的所有字段。",
     inputSchema: {
@@ -211,6 +228,36 @@ function createServer() {
     },
   }, toolHandler(({ path, params, useUAT }) =>
     feishuRequest("GET", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/fields`, { query: params, useUAT })
+  ));
+
+  server.registerTool("bitable_v1_appTableField_create", {
+    description: "在多维表格数据表中新增一个字段。不会删除或覆盖现有字段。",
+    inputSchema: {
+      path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1) }),
+      data: z.object({
+        field_name: z.string().min(1),
+        type: z.number().int().positive(),
+        property: z.any().optional(),
+      }),
+      useUAT: useUATSchema,
+    },
+  }, toolHandler(({ path, data, useUAT }) =>
+    feishuRequest("POST", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/fields`, { body: data, useUAT })
+  ));
+
+  server.registerTool("bitable_v1_appTableField_update", {
+    description: "更新多维表格数据表中的一个字段定义，例如重命名默认主字段。",
+    inputSchema: {
+      path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1), field_id: z.string().min(1) }),
+      data: z.object({
+        field_name: z.string().min(1),
+        type: z.number().int().positive(),
+        property: z.any().optional(),
+      }),
+      useUAT: useUATSchema,
+    },
+  }, toolHandler(({ path, data, useUAT }) =>
+    feishuRequest("PUT", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/fields/${encodeURIComponent(path.field_id)}`, { body: data, useUAT })
   ));
 
   server.registerTool("bitable_v1_appTableRecord_search", {
@@ -274,6 +321,35 @@ function createServer() {
     },
   }, toolHandler(({ path, params, data, useUAT }) =>
     feishuRequest("PUT", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/records/${encodeURIComponent(path.record_id)}`, { query: params, body: data, useUAT })
+  ));
+
+  server.registerTool("bitable_v1_appTableRecord_batchCreate", {
+    description: "批量新增多维表格记录，单次最多 500 条。",
+    inputSchema: {
+      path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1) }),
+      params: z.object({ user_id_type: userIdType }).optional(),
+      data: z.object({ records: z.array(z.object({ fields })).min(1).max(500) }),
+      useUAT: useUATSchema,
+    },
+  }, toolHandler(({ path, params, data, useUAT }) =>
+    feishuRequest("POST", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/records/batch_create`, { query: params, body: data, useUAT })
+  ));
+
+  server.registerTool("bitable_v1_appTableRecord_batchUpdate", {
+    description: "批量更新多维表格记录，单次最多 500 条。",
+    inputSchema: {
+      path: z.object({ app_token: z.string().min(1), table_id: z.string().min(1) }),
+      params: z.object({ user_id_type: userIdType }).optional(),
+      data: z.object({
+        records: z.array(z.object({
+          record_id: z.string().min(1),
+          fields,
+        })).min(1).max(500),
+      }),
+      useUAT: useUATSchema,
+    },
+  }, toolHandler(({ path, params, data, useUAT }) =>
+    feishuRequest("POST", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables/${encodeURIComponent(path.table_id)}/records/batch_update`, { query: params, body: data, useUAT })
   ));
 
   server.registerTool("sheets_v3_spreadsheet_get", {

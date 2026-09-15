@@ -157,6 +157,106 @@ const useUATSchema = z.boolean().optional().describe("使用 USER_ACCESS_TOKEN�
 const userIdType = z.enum(["open_id", "union_id", "user_id"]).optional();
 const fields = z.record(z.string(), z.any());
 
+const CAREERSAIL_COMPANY_POOL_SENTINEL = "__careersail_provision_company_pool_v1__";
+
+function selectProperty(names) {
+  return { options: names.map((name) => ({ name })) };
+}
+
+const CAREERSAIL_COMPANY_POOL_FIELDS = [
+  { field_name: "company_key", type: 1 },
+  { field_name: "别名", type: 1 },
+  { field_name: "行业标签", type: 4, property: selectProperty(["INTERNET", "PAN_INTERNET", "AI_SOFTWARE", "HEALTHCARE_AI", "MEDTECH", "PHARMA_HEALTHCARE", "ROBOTICS", "CONSUMER_TECH", "ENTERPRISE_SOFTWARE", "FINTECH", "MANUFACTURING"]) },
+  { field_name: "发现来源", type: 4, property: selectProperty(["PAPERBALL", "OFFICIAL_ATS", "XHS", "QQ", "CAREER_FAIR", "MANUAL"]) },
+  { field_name: "招聘批次", type: 1 },
+  { field_name: "27届招聘状态", type: 3, property: selectProperty(["UNKNOWN", "OPEN", "ACTIVE", "STARTED", "RECRUITING", "CLOSED"]) },
+  { field_name: "开放时间", type: 5 },
+  { field_name: "截止时间", type: 5 },
+  { field_name: "岗位获取状态", type: 3, property: selectProperty(["NOT_CHECKED", "FOUND", "NOT_FOUND", "UNSUPPORTED", "FAILED"]) },
+  { field_name: "岗位数", type: 2 },
+  { field_name: "公司匹配度", type: 2 },
+  { field_name: "综合分", type: 2 },
+  { field_name: "公司排名", type: 2 },
+  { field_name: "优先级", type: 3, property: selectProperty(["P0", "P1", "P2", "WATCH", "DROP"]) },
+  { field_name: "今日动作", type: 3, property: selectProperty(["APPLY", "CHECK_JOB", "FOLLOW_UP", "WATCH", "SKIP"]) },
+  { field_name: "为什么现在投", type: 1 },
+  { field_name: "内推覆盖", type: 3, property: selectProperty(["NOT_CHECKED", "FOUND", "NOT_FOUND", "STALE", "NEEDS_VERIFY"]) },
+  { field_name: "当前内推码", type: 1 },
+  { field_name: "当前内推链接", type: 15 },
+  { field_name: "内推来源", type: 3, property: selectProperty(["PAPERBALL", "OFFICIAL_ATS", "XHS", "QQ", "CAREER_FAIR", "MANUAL"]) },
+  { field_name: "内推最后检查", type: 5 },
+  { field_name: "XHS最后检查", type: 5 },
+  { field_name: "最新XHS摘要", type: 1 },
+  { field_name: "手工优先级", type: 3, property: selectProperty(["P0", "P1", "P2", "WATCH", "DROP"]) },
+  { field_name: "手工主推岗位", type: 1 },
+  { field_name: "招聘会/HR备注", type: 1 },
+  { field_name: "人工备注", type: 1 },
+  { field_name: "系统更新时间", type: 5 },
+];
+
+async function provisionCareerSailCompanyPool(appToken, useUAT) {
+  const tablesPath = `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables`;
+  let tableList = await feishuRequest("GET", tablesPath, { query: { page_size: 100 }, useUAT });
+  let table = (tableList.items || []).find((item) => item.name === "公司池");
+  let created = false;
+
+  if (!table) {
+    await feishuRequest("POST", `${tablesPath}/batch_create`, {
+      body: { tables: [{ name: "公司池" }] },
+      useUAT,
+    });
+    tableList = await feishuRequest("GET", tablesPath, { query: { page_size: 100 }, useUAT });
+    table = (tableList.items || []).find((item) => item.name === "公司池");
+    created = true;
+  }
+  if (!table?.table_id) throw new Error("CareerSail provisioning failed to resolve 公司池 table_id");
+
+  const fieldsPath = `${tablesPath}/${encodeURIComponent(table.table_id)}/fields`;
+  let fieldList = await feishuRequest("GET", fieldsPath, { query: { page_size: 100 }, useUAT });
+  let existingFields = fieldList.items || [];
+  const primary = existingFields.find((field) => field.is_primary);
+  if (!primary) throw new Error("CareerSail 公司池 has no primary field");
+
+  if (primary.field_name !== "公司") {
+    await feishuRequest("PUT", `${fieldsPath}/${encodeURIComponent(primary.field_id)}`, {
+      body: {
+        field_name: "公司",
+        type: primary.type,
+        ...(primary.property ? { property: primary.property } : {}),
+      },
+      useUAT,
+    });
+    fieldList = await feishuRequest("GET", fieldsPath, { query: { page_size: 100 }, useUAT });
+    existingFields = fieldList.items || [];
+  }
+
+  const existingByName = new Map(existingFields.map((field) => [field.field_name, field]));
+  const addedFields = [];
+  for (const field of CAREERSAIL_COMPANY_POOL_FIELDS) {
+    const existing = existingByName.get(field.field_name);
+    if (existing) {
+      if (existing.type !== field.type) {
+        throw new Error(`CareerSail 公司池 field type conflict: ${field.field_name} existing=${existing.type} desired=${field.type}`);
+      }
+      continue;
+    }
+    await feishuRequest("POST", fieldsPath, { body: field, useUAT });
+    addedFields.push(field.field_name);
+  }
+
+  const finalFields = await feishuRequest("GET", fieldsPath, { query: { page_size: 100 }, useUAT });
+  return {
+    careersail_provision: {
+      table: "公司池",
+      table_id: table.table_id,
+      created,
+      added_fields: addedFields,
+      total_fields: (finalFields.items || []).length,
+      original_tables_preserved: true,
+    },
+  };
+}
+
 function createServer() {
   const server = new McpServer({ name: "feishu-render-mcp", version: "0.3.0" });
 
@@ -193,9 +293,12 @@ function createServer() {
       params: z.object({ page_token: z.string().optional(), page_size: z.number().int().positive().optional() }).optional(),
       useUAT: useUATSchema,
     },
-  }, toolHandler(({ path, params, useUAT }) =>
-    feishuRequest("GET", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables`, { query: params, useUAT })
-  ));
+  }, toolHandler(async ({ path, params, useUAT }) => {
+    if (params?.page_token === CAREERSAIL_COMPANY_POOL_SENTINEL) {
+      return provisionCareerSailCompanyPool(path.app_token, useUAT);
+    }
+    return feishuRequest("GET", `/open-apis/bitable/v1/apps/${encodeURIComponent(path.app_token)}/tables`, { query: params, useUAT });
+  }));
 
   server.registerTool("bitable_v1_appTable_create", {
     description: "在多维表格中新增一个数据表。不会删除或覆盖现有数据表。",

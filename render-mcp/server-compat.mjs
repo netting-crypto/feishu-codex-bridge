@@ -159,6 +159,293 @@ const fields = z.record(z.string(), z.any());
 
 const CAREERSAIL_COMPANY_POOL_SENTINEL = "__careersail_provision_company_pool_v1__";
 const CAREERSAIL_FULL_SYSTEM_SENTINEL = "__careersail_provision_full_system_v1__";
+const CAREERSAIL_COMPANY_POOL_V4_SYNC_SENTINEL = "__careersail_sync_company_pool_v4__";
+const CAREERSAIL_TARGET_APP_TOKEN = "I7RlbWkZ6a4QvBs5DjdcAAdJn6b";
+const CAREERSAIL_TARGET_COMPANY_TABLE_ID = "tblIHcNm1dkSVgrA";
+
+const CAREERSAIL_COMPANY_POOL_V4 = `
+抖音体验与服务团队
+剪映CapCut
+懂车帝
+字节跳动 GMPT
+腾讯金融科技
+腾讯营销
+阿里健康
+阿里云瓴羊
+高德地图
+盒马
+小红书
+快手
+DeepSeek
+商汤科技
+中电信人工智能科技(北京)有限公司
+汽车之家
+镁信健康
+卫宁健康
+信雅达
+帆软
+韶音科技
+中国平安
+泰康保险
+小米集团
+OPPO
+vivo
+雷鸟科技
+大疆
+京东
+TCL
+中国移动
+科大讯飞
+荣耀
+小鹏汽车
+安克创新
+传音控股
+海信
+联想
+海尔
+九号公司
+正浩EcoFlow
+智岩科技
+拓竹科技
+歌尔股份
+贝泰妮
+思必驰
+作业帮
+babycare
+森马
+新中大科技
+广电运通
+新华三
+博思软件
+万兴科技
+Shopee虾皮
+转转
+迅雷网络
+心动×TapTap
+新浪微博
+哔哩哔哩
+网易
+美团
+百度
+度小满
+沐瞳科技
+e签宝
+合合信息
+金蝶
+得物
+三七互娱
+数坤科技
+Sea
+去哪儿
+阿里云
+TCL华星
+淘天集团
+蚂蚁集团
+阿里国际
+携程
+京东健康
+水滴公司
+联影医疗
+迈瑞医疗
+讯飞医疗
+平安健康
+蔚来
+理想
+元戎启行
+卓驭
+新石器无人车
+千里科技
+九识智能
+优必选科技
+普渡机器人
+星尘智能
+乐动机器人
+海柔创新
+奥比中光
+RoboSense
+禾赛科技
+它石智航
+佑驾创新
+北京发那科
+亿联网络
+天翼云
+浩鲸科技
+海大集团
+亚信安全
+亿道集团
+三一集团
+安踏
+春秋航空
+新大陆科技集团
+图拉斯
+杉川集团
+致欧家居
+认养一头牛
+北京国能日新
+海艺互娱
+招商银行信用卡中心
+`.trim().split("\n");
+
+const CAREERSAIL_ALREADY_APPLIED = new Set([
+  "字节跳动 GMPT", "中国平安", "安克创新", "传音控股", "海信", "贝泰妮", "网易", "美团", "百度", "度小满",
+  "沐瞳科技", "e签宝", "合合信息", "金蝶", "得物", "三七互娱", "数坤科技", "Sea", "去哪儿", "理想",
+  "元戎启行", "卓驭", "海艺互娱", "招商银行信用卡中心",
+]);
+const CAREERSAIL_FOLLOW_UP = new Set(["中国平安", "安克创新", "招商银行信用卡中心"]);
+const CAREERSAIL_CHECK_JOB = new Set([
+  "TCL", "荣耀", "联想", "海尔", "TCL华星", "淘天集团", "蚂蚁集团", "阿里国际", "携程", "京东健康",
+  "水滴公司", "联影医疗", "迈瑞医疗", "讯飞医疗", "平安健康", "蔚来", "禾赛科技",
+]);
+
+const CAREERSAIL_HEALTHCARE = new Set([
+  "阿里健康", "镁信健康", "卫宁健康", "中国平安", "泰康保险", "贝泰妮", "数坤科技", "京东健康", "水滴公司",
+  "联影医疗", "迈瑞医疗", "讯飞医疗", "平安健康", "科大讯飞",
+]);
+const CAREERSAIL_CONSUMER_TECH = new Set([
+  "小米集团", "OPPO", "vivo", "雷鸟科技", "大疆", "荣耀", "安克创新", "传音控股", "海信", "联想", "海尔", "TCL",
+  "TCL华星", "九号公司", "正浩EcoFlow", "智岩科技", "拓竹科技", "歌尔股份", "奥比中光", "倍思奇",
+]);
+const CAREERSAIL_ROBOTICS = new Set([
+  "小鹏汽车", "蔚来", "理想", "元戎启行", "卓驭", "新石器无人车", "千里科技", "九识智能", "优必选科技", "普渡机器人",
+  "星尘智能", "乐动机器人", "海柔创新", "RoboSense", "禾赛科技", "它石智航", "佑驾创新", "北京发那科",
+]);
+const CAREERSAIL_ENTERPRISE = new Set([
+  "信雅达", "帆软", "金蝶", "阿里云", "阿里云瓴羊", "中电信人工智能科技(北京)有限公司", "新华三", "博思软件", "新中大科技",
+  "亚信安全", "天翼云", "浩鲸科技", "广电运通", "亿道集团", "三一集团", "新大陆科技集团",
+]);
+const CAREERSAIL_FINTECH = new Set(["腾讯金融科技", "度小满", "蚂蚁集团", "东方财富", "嘉实基金", "招商银行信用卡中心"]);
+
+function careerSailCanonicalCompanyKey(name) {
+  return `company:${String(name || "").normalize("NFKC").trim().toLowerCase()}`;
+}
+
+function careerSailIndustryTag(name) {
+  if (CAREERSAIL_HEALTHCARE.has(name)) return ["HEALTHCARE_AI"];
+  if (CAREERSAIL_CONSUMER_TECH.has(name)) return ["CONSUMER_TECH"];
+  if (CAREERSAIL_ROBOTICS.has(name)) return ["ROBOTICS"];
+  if (CAREERSAIL_ENTERPRISE.has(name)) return ["ENTERPRISE_SOFTWARE", "AI_SOFTWARE"];
+  if (CAREERSAIL_FINTECH.has(name)) return ["FINTECH"];
+  return ["INTERNET", "AI_SOFTWARE"];
+}
+
+function careerSailAction(name) {
+  if (CAREERSAIL_FOLLOW_UP.has(name)) return "FOLLOW_UP";
+  if (CAREERSAIL_ALREADY_APPLIED.has(name) || CAREERSAIL_CHECK_JOB.has(name)) return "CHECK_JOB";
+  return "APPLY";
+}
+
+function careerSailReason(name, rank, action) {
+  const industry = CAREERSAIL_HEALTHCARE.has(name)
+    ? "医疗AI/数字健康重点方向"
+    : CAREERSAIL_CONSUMER_TECH.has(name)
+      ? "AI终端/智能硬件软件体验重点方向"
+      : CAREERSAIL_ROBOTICS.has(name)
+        ? "智能汽车/机器人软件产品邻接方向"
+        : CAREERSAIL_ENTERPRISE.has(name)
+          ? "AI应用/业务工具/企业软件方向"
+          : "AI应用产品/Agent/产品策略相关方向";
+  const timing = rank <= 30 ? "流程慢或机会强，优先处理" : rank <= 60 ? "高匹配，第二批覆盖" : rank <= 90 ? "匹配明确，9月20日前覆盖" : "扩展池，9月21日前尽量覆盖";
+  if (action === "FOLLOW_UP") return `已进入流程；${industry}；${timing}`;
+  if (action === "CHECK_JOB") return `公司值得继续覆盖；${industry}；先查当前可投岗位/多投限制；${timing}`;
+  return `2027秋招候选；${industry}；${timing}`;
+}
+
+function careerSailTextValue(value) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map((item) => item?.text ?? item?.name ?? item ?? "").join("").trim();
+  if (value && typeof value === "object") return value.text || value.name || "";
+  return value == null ? "" : String(value);
+}
+
+async function syncCareerSailCompanyPoolV4(appToken, useUAT) {
+  if (appToken !== CAREERSAIL_TARGET_APP_TOKEN) {
+    throw new Error("CareerSail V4 sync is restricted to the configured target Base");
+  }
+  const recordsPath = `/open-apis/bitable/v1/apps/${encodeURIComponent(appToken)}/tables/${encodeURIComponent(CAREERSAIL_TARGET_COMPANY_TABLE_ID)}/records`;
+  const current = await feishuRequest("POST", `${recordsPath}/search`, {
+    query: { page_size: 500 },
+    body: { field_names: ["公司", "company_key"] },
+    useUAT,
+  });
+  const existing = current.items || [];
+  const byKey = new Map();
+  const byName = new Map();
+  for (const record of existing) {
+    const key = careerSailTextValue(record.fields?.company_key);
+    const name = careerSailTextValue(record.fields?.["公司"]);
+    if (key) byKey.set(key, record);
+    if (name) byName.set(name.trim().toLowerCase(), record);
+  }
+
+  const now = Date.now();
+  const creates = [];
+  const updates = [];
+  const actionCounts = { APPLY: 0, CHECK_JOB: 0, FOLLOW_UP: 0 };
+  for (let index = 0; index < CAREERSAIL_COMPANY_POOL_V4.length; index += 1) {
+    const name = CAREERSAIL_COMPANY_POOL_V4[index];
+    const rank = index + 1;
+    const action = careerSailAction(name);
+    actionCounts[action] += 1;
+    const priority = rank <= 60 ? "P0" : rank <= 100 ? "P1" : "P2";
+    const match = rank <= 30 ? 95 : rank <= 60 ? 90 : rank <= 90 ? 84 : 78;
+    const score = rank <= 30 ? 94 : rank <= 60 ? 89 : rank <= 90 ? 83 : 76;
+    const fields = {
+      "公司": name,
+      company_key: careerSailCanonicalCompanyKey(name),
+      "行业标签": careerSailIndustryTag(name),
+      "发现来源": ["MANUAL"],
+      "招聘批次": "2027秋招｜V4执行榜｜2026-09-16",
+      "27届招聘状态": "OPEN",
+      "岗位获取状态": CAREERSAIL_CHECK_JOB.has(name) ? "NOT_CHECKED" : "FOUND",
+      "岗位数": CAREERSAIL_CHECK_JOB.has(name) ? 0 : 1,
+      "公司匹配度": match,
+      "综合分": score,
+      "公司排名": rank,
+      "优先级": priority,
+      "今日动作": action,
+      "为什么现在投": careerSailReason(name, rank, action),
+      "内推覆盖": "NOT_CHECKED",
+      "系统更新时间": now,
+    };
+    const key = fields.company_key;
+    const found = byKey.get(key) || byName.get(name.trim().toLowerCase());
+    if (found?.record_id) updates.push({ record_id: found.record_id, fields });
+    else creates.push({ fields });
+  }
+
+  const chunks = (items, size = 500) => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, i * size + size));
+  for (const records of chunks(creates)) {
+    if (!records.length) continue;
+    await feishuRequest("POST", `${recordsPath}/batch_create`, { body: { records }, useUAT });
+  }
+  for (const records of chunks(updates)) {
+    if (!records.length) continue;
+    await feishuRequest("POST", `${recordsPath}/batch_update`, { body: { records }, useUAT });
+  }
+
+  const verify = await feishuRequest("POST", `${recordsPath}/search`, {
+    query: { page_size: 500 },
+    body: {
+      field_names: ["公司", "company_key", "招聘批次", "公司排名", "优先级", "今日动作"],
+      sort: [{ field_name: "公司排名", desc: false }],
+    },
+    useUAT,
+  });
+  const targetKeys = new Set(CAREERSAIL_COMPANY_POOL_V4.map(careerSailCanonicalCompanyKey));
+  const verified = (verify.items || []).filter((record) => targetKeys.has(careerSailTextValue(record.fields?.company_key)));
+  return {
+    careersail_company_pool_v4: {
+      target_table: CAREERSAIL_TARGET_COMPANY_TABLE_ID,
+      ranked: CAREERSAIL_COMPANY_POOL_V4.length,
+      created: creates.length,
+      updated: updates.length,
+      verified: verified.length,
+      action_counts: actionCounts,
+      top_10: verified.slice(0, 10).map((record) => ({ record_id: record.record_id, fields: record.fields })),
+      human_fields_preserved: true,
+    },
+  };
+}
 
 function selectProperty(names) {
   return { options: names.map((name) => ({ name })) };
@@ -455,6 +742,9 @@ function createServer() {
       useUAT: useUATSchema,
     },
   }, toolHandler(async ({ path, params, useUAT }) => {
+    if (params?.page_token === CAREERSAIL_COMPANY_POOL_V4_SYNC_SENTINEL) {
+      return syncCareerSailCompanyPoolV4(path.app_token, useUAT);
+    }
     if (params?.page_token === CAREERSAIL_FULL_SYSTEM_SENTINEL) {
       return provisionCareerSailFullSystem(path.app_token, useUAT);
     }

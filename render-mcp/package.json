@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server-compat.mjs",
     "test": "node --test test/*.test.mjs",
-    "check": "node --check server-compat.mjs && node --check diagnostics.mjs && node --check auth.mjs"
+    "check": "node --check server-compat.mjs && node --check diagnostics.mjs && node --check auth.mjs && node --check probe.mjs && node --check verification-cleanup.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

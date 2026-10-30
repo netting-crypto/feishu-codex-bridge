@@ -1,3 +1,4 @@
+import { cleanupVerificationRecord } from "./verification-cleanup.mjs";
 const LARK_DOMAIN = (process.env.LARK_DOMAIN || "https://open.feishu.cn").replace(/\/$/, "");
 const APP_ID = process.env.APP_ID || "";
 const APP_SECRET = process.env.APP_SECRET || "";
@@ -38,7 +39,9 @@ async function api(token, method, path, body) {
   });
   const payload = await json(res);
   if (!res.ok || (typeof payload.code === "number" && payload.code !== 0)) {
-    throw new Error(`${method} ${path} failed: ${payload.msg || res.status}`);
+    const error = new Error(`${method} ${path} failed: code=${payload.code ?? "unknown"} ${payload.msg || res.status}`);
+    error.code = payload.code;
+    throw error;
   }
   return payload.data || payload;
 }
@@ -89,6 +92,8 @@ async function runBitableProbe(token) {
 
 async function run() {
   const token = await getTenantToken();
+  const cleanup = await cleanupVerificationRecord((method, path) => api(token, method, path));
+  if (cleanup.status !== "disabled") console.log(`VERIFICATION_CLEANUP ${JSON.stringify(cleanup)}`);
   await runSheetProbe(token);
   await runBitableProbe(token);
 }

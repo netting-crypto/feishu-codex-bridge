@@ -9,7 +9,7 @@ RUN npm ci --omit=dev \
   && npm cache clean --force
 
 COPY server-compat.mjs diagnostics.mjs auth.mjs ./
-COPY probe.mjs ./
+COPY probe.mjs verification-cleanup.mjs ./
 
 USER node
 EXPOSE 10000

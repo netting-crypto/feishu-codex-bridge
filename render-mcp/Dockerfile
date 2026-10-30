@@ -4,10 +4,11 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install --omit=dev \
+COPY package-lock.json ./
+RUN npm ci --omit=dev \
   && npm cache clean --force
 
-COPY server-compat.mjs diagnostics.mjs ./
+COPY server-compat.mjs diagnostics.mjs auth.mjs ./
 COPY probe.mjs ./
 
 USER node

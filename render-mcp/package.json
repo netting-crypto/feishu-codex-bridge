@@ -1,13 +1,13 @@
 {
   "name": "feishu-render-mcp",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "Remote Feishu MCP for Render with Wiki, Bitable, and Sheets read/write tools.",
   "scripts": {
     "start": "node server-compat.mjs",
     "test": "node --test test/*.test.mjs",
-    "check": "node --check server-compat.mjs && node --check diagnostics.mjs"
+    "check": "node --check server-compat.mjs && node --check diagnostics.mjs && node --check auth.mjs"
   },
   "engines": {
     "node": ">=20.0.0"

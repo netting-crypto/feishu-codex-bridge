@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import { feishuError, redact } from "./diagnostics.mjs";
 
 const PORT = Number(process.env.PORT || 10000);
 const LARK_DOMAIN = (process.env.LARK_DOMAIN || "https://open.feishu.cn").replace(/\/$/, "");
@@ -19,7 +20,7 @@ async function parseJson(response) {
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(`Feishu returned non-JSON (${response.status}): ${text.slice(0, 500)}`);
+    return { msg: "Feishu returned a non-JSON response", code: null };
   }
 }
 
@@ -35,7 +36,7 @@ async function getTenantAccessToken(forceRefresh = false) {
   });
   const payload = await parseJson(response);
   if (!response.ok || payload.code !== 0 || !payload.tenant_access_token) {
-    throw new Error(`Failed to obtain tenant_access_token: ${payload.msg || response.statusText}`);
+    throw feishuError(response, payload, { method: "POST", path: "/open-apis/auth/v3/tenant_access_token/internal", appId: APP_ID, secrets: [APP_SECRET, USER_ACCESS_TOKEN] });
   }
   tenantTokenCache = {
     token: payload.tenant_access_token,
@@ -81,9 +82,8 @@ async function feishuRequest(method, path, { query, body, useUAT = false } = {},
     await getTenantAccessToken(true);
     return feishuRequest(method, path, { query, body, useUAT }, false);
   }
-  if (!response.ok) throw new Error(`Feishu HTTP ${response.status}: ${payload.msg || response.statusText}`);
-  if (typeof payload.code === "number" && payload.code !== 0) {
-    throw new Error(`Feishu API ${payload.code}: ${payload.msg || "unknown error"}`);
+  if (!response.ok || (payload.code !== undefined && payload.code !== 0) || payload.code === null) {
+    throw feishuError(response, payload, { method, path, appId: APP_ID, useUAT, secrets: [APP_SECRET, USER_ACCESS_TOKEN, token] });
   }
   return payload.data ?? payload;
 }
@@ -94,7 +94,8 @@ function toolHandler(fn) {
       const data = await fn(args || {});
       return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = redact(error instanceof Error ? error.message : String(error), [APP_SECRET, USER_ACCESS_TOKEN, tenantTokenCache?.token]);
+      if (error.diagnostic) console.error(JSON.stringify(error.diagnostic));
       return { content: [{ type: "text", text: message }], isError: true };
     }
   };
@@ -706,7 +707,7 @@ async function provisionCareerSailFullSystem(appToken, useUAT) {
 }
 
 function createServer() {
-  const server = new McpServer({ name: "feishu-render-mcp", version: "0.3.0" });
+  const server = new McpServer({ name: "feishu-render-mcp", version: "0.3.1" });
 
   server.registerTool("wiki_v2_space_getNode", {
     description: "获取飞书知识库节点或对应云文档的节点信息；若节点是电子表格，同时返回工作表列表和单元格预览。",
@@ -942,7 +943,7 @@ app.use(express.json({ limit: "2mb" }));
 const sessions = new Map();
 
 app.get("/", (_req, res) => {
-  res.json({ ok: true, service: "feishu-render-mcp", version: "0.3.0", endpoint: "/mcp" });
+  res.json({ ok: true, service: "feishu-render-mcp", version: "0.3.1", endpoint: "/mcp", commit: process.env.RENDER_GIT_COMMIT || null });
 });
 
 app.post("/mcp", async (req, res) => {
@@ -974,7 +975,7 @@ app.post("/mcp", async (req, res) => {
 
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
-    console.error("MCP POST failed", error);
+    console.error("MCP POST failed", redact(error.message, [APP_SECRET, USER_ACCESS_TOKEN, tenantTokenCache?.token]));
     if (!res.headersSent) {
       res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal server error" }, id: null });
     }
@@ -992,12 +993,12 @@ for (const method of ["get", "delete"]) {
     try {
       await transport.handleRequest(req, res);
     } catch (error) {
-      console.error(`MCP ${method.toUpperCase()} failed`, error);
+      console.error(`MCP ${method.toUpperCase()} failed`, redact(error.message, [APP_SECRET, USER_ACCESS_TOKEN, tenantTokenCache?.token]));
       if (!res.headersSent) res.status(500).end();
     }
   });
 }
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`feishu-render-mcp 0.3.0 listening on ${PORT}`);
+  console.log(`feishu-render-mcp 0.3.1 listening on ${PORT}`);
 });

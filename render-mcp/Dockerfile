@@ -7,7 +7,7 @@ COPY package.json ./
 RUN npm install --omit=dev \
   && npm cache clean --force
 
-COPY server-compat.mjs ./
+COPY server-compat.mjs diagnostics.mjs ./
 COPY probe.mjs ./
 
 USER node
